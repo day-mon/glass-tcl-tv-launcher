@@ -25,8 +25,8 @@
 
     <!-- Show each app's icon next to its name. Off by default: TV icons are coloured tiles, and
          neither the colour nor a grey silhouette suits this look. Names alone match the reference. -->
-    <bool name="show_icons">false</bool>
+    <bool name="show_icons">true</bool>
 
-    <!-- Only used when show_icons is on: strip the colour out of the icons. -->
-    <bool name="monochrome_icons">true</bool>
+    <!-- Only used when show_icons is on: turn each coloured icon into a white glass glyph. -->
+    <bool name="glass_icons">true</bool>
 </resources>

@@ -4,8 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ResolveInfo
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.provider.Settings
 import android.view.KeyEvent
@@ -47,10 +46,12 @@ class AppListAdapter(
     /** Never listed (res/values/config.xml, hidden_apps). */
     private val hidden: Set<String> = context.resources.getStringArray(R.array.hidden_apps).toSet()
 
-    private val monochromeIcons: Boolean = context.resources.getBoolean(R.bool.monochrome_icons)
+    private val glassIcons: Boolean = context.resources.getBoolean(R.bool.glass_icons)
     private val showIcons: Boolean = context.resources.getBoolean(R.bool.show_icons)
+    private val iconSize: Int = context.resources.getDimensionPixelSize(R.dimen.icon_size)
 
-    private val monochrome = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
+    /** Glass glyphs are derived once per app and reused on every bind. */
+    private val glyphs = mutableMapOf<String, Drawable?>()
 
     private val items = mutableListOf<AppEntry>()
 
@@ -102,8 +103,7 @@ class AppListAdapter(
         // Most TV app icons are a white logo on a coloured tile: with the colour removed they are just
         // grey rectangles, so the clean look is names alone unless you ask for icons.
         holder.icon.visibility = if (showIcons) View.VISIBLE else View.GONE
-        holder.icon.setImageDrawable(if (showIcons) entry.icon else null)
-        holder.icon.colorFilter = if (showIcons && monochromeIcons) monochrome else null
+        holder.icon.setImageDrawable(if (showIcons) iconOf(entry) else null)
         holder.setFocused(holder.content.hasFocus())
 
         holder.content.setOnClickListener { launch(entry) }
@@ -122,6 +122,13 @@ class AppListAdapter(
     }
 
     override fun getItemCount(): Int = items.size
+
+    private fun iconOf(entry: AppEntry): Drawable? = when
+    {
+        !glassIcons -> entry.icon
+        entry.icon == null -> null
+        else -> glyphs.getOrPut(entry.packageName) { GlyphIcons.of(entry.icon, iconSize) }
+    }
 
     private fun launch(entry: AppEntry)
     {

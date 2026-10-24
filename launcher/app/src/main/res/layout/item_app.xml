@@ -23,15 +23,15 @@
 
         <ImageView
             android:id="@+id/icon"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="@dimen/icon_size"
+            android:layout_height="@dimen/icon_size"
             android:contentDescription="@null" />
 
         <TextView
             android:id="@+id/label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="18dp"
+            android:layout_marginStart="20dp"
             android:includeFontPadding="false"
             android:singleLine="true"
             android:ellipsize="end"
