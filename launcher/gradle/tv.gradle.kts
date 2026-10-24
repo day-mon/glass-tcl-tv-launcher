@@ -107,8 +107,32 @@ tasks.register("tvHome") {
 
 tasks.register("tvTest") {
     group = "tv"
-    description = "Run the instrumented tests on the TV."
-    dependsOn("tvConnect", "connectedDebugAndroidTest")
+    description = "Run the instrumented tests on the TV and fail if any of them does."
+    dependsOn("assembleDebug", "assembleDebugAndroidTest", "tvConnect")
+
+    doLast {
+        val app = layout.buildDirectory.file("outputs/apk/debug/app-debug.apk").get().asFile
+        val test = layout.buildDirectory.file("outputs/apk/androidTest/debug/app-debug-androidTest.apk").get().asFile
+        check(app.exists()) { "no app APK; run assembleDebug" }
+        check(test.exists()) { "no test APK; run assembleDebugAndroidTest" }
+        check(adb("install", "-r", app.absolutePath) == 0) { "app install failed" }
+        check(adb("install", "-r", test.absolutePath) == 0) { "test install failed" }
+
+        // connectedDebugAndroidTest reports failures its own XML does not contain on this device, so
+        // the runner is driven directly and its summary parsed.
+        val process = ProcessBuilder(
+            adbExecutable, "-s", tvDevice, "shell", "am", "instrument", "-w",
+            "$tvPackage.test/androidx.test.runner.AndroidJUnitRunner"
+        ).redirectErrorStream(true).start()
+        val output = process.inputStream.bufferedReader().readLines()
+        process.waitFor()
+        output.filter { it.isNotBlank() }.takeLast(25).forEach { logger.lifecycle("  $it") }
+
+        val summary = output.joinToString("\n")
+        val failed = summary.contains("FAILURES!!!") || summary.contains("INSTRUMENTATION_FAILED") ||
+                summary.contains("Error:") || !summary.contains("OK (")
+        check(!failed) { "instrumented tests failed; see the runner output above" }
+    }
 }
 
 tasks.register("tvScreenshot") {
