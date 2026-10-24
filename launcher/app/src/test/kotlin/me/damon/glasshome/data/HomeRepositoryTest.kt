@@ -2,6 +2,7 @@ package me.damon.glasshome.data
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.runBlocking
 import me.damon.glasshome.model.IconStyle
 import me.damon.glasshome.model.LayoutMode
 import me.damon.glasshome.model.PillMaterial
@@ -55,7 +56,7 @@ class HomeRepositoryTest
         val packages = listOf("com.example.second", "com.example.first")
 
         repository.saveOrder(packages)
-        repository.refresh()
+        runBlocking { repository.refresh() }
 
         assertEquals(packages, AppOrder(context).load())
     }
@@ -66,7 +67,7 @@ class HomeRepositoryTest
         val repository = HomeRepository(context)
         repository.setLayout(LayoutMode.DOCK)
 
-        repository.refresh()
+        runBlocking { repository.refresh() }
 
         assertEquals(LayoutMode.DOCK, repository.state.value.appearance.layout)
         assertTrue(repository.state.value.entries.size >= 0)

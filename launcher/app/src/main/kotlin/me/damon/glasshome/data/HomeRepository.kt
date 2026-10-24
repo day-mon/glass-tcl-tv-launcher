@@ -4,6 +4,11 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ResolveInfo
+import android.os.Trace
+import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import me.damon.glasshome.BuildConfig
 import me.damon.glasshome.R
 import me.damon.glasshome.model.AppEntry
 import me.damon.glasshome.model.AppSorter
@@ -23,16 +28,53 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class HomeRepository(private val context: Context)
 {
+    private companion object
+    {
+        private const val TAG = "GlassHome"
+    }
+
     private val settings = HomeSettings(context)
     private val order = AppOrder(context)
 
-    private val _state = MutableStateFlow(read())
+    // The appearance is cheap to read; the app scan is not, so it happens off the main thread once
+    // the screen is already up.
+    private val _state = MutableStateFlow(HomeState(appearance = settings.read()))
     val state: StateFlow<HomeState> = _state.asStateFlow()
 
     /** Re-reads installed apps, keeping the appearance and saved order. */
-    fun refresh()
+    suspend fun refresh()
     {
-        _state.value = read()
+        val started = System.nanoTime()
+        val entries = withContext(Dispatchers.Default)
+        {
+            Trace.beginSection("glasshome:scan-query")
+            val scanned = try
+            {
+                query()
+            }
+            finally
+            {
+                Trace.endSection()
+            }
+
+            Trace.beginSection("glasshome:scan")
+            try
+            {
+                AppSorter.sort(scanned, pinned(), order.load())
+            }
+            finally
+            {
+                Trace.endSection()
+            }
+        }
+        // Appearance is re-read too: storage is the truth, in case anything changed it elsewhere.
+        _state.value = HomeState(appearance = settings.read(), entries = entries)
+
+        if (BuildConfig.DEBUG)
+        {
+            val millis = (System.nanoTime() - started) / 1_000_000
+            Log.d(TAG, "scan: ${entries.size} apps in $millis ms")
+        }
     }
 
     fun setLayout(mode: LayoutMode) = update { it.copy(layout = mode) }
@@ -53,19 +95,13 @@ class HomeRepository(private val context: Context)
         _state.value = _state.value.copy(appearance = appearance)
     }
 
-    private fun read(): HomeState
-    {
-        val appearance = settings.read()
-        return HomeState(appearance = appearance, entries = AppSorter.sort(scan(), pinned(), order.load()))
-    }
-
     private fun pinned(): List<String> =
         context.resources.getStringArray(R.array.home_apps).toList()
 
     private fun hidden(): Set<String> =
         context.resources.getStringArray(R.array.hidden_apps).toSet()
 
-    private fun scan(): List<AppEntry>
+    private fun query(): List<AppEntry>
     {
         val manager = context.packageManager
         val hidden = hidden()
@@ -83,12 +119,20 @@ class HomeRepository(private val context: Context)
             }
         }
 
-        return byPackage.values.map {
+        Trace.beginSection("glasshome:scan-labels")
+        val labels = byPackage.values.map { it.loadLabel(manager).toString() }
+        Trace.endSection()
+
+        Trace.beginSection("glasshome:scan-build")
+        val entries = byPackage.values.mapIndexed { index, info ->
             AppEntry(
-                label = it.loadLabel(manager).toString(),
-                component = ComponentName(it.activityInfo.packageName, it.activityInfo.name),
-                icon = it.loadIcon(manager)
+                label = labels[index],
+                component = ComponentName(info.activityInfo.packageName, info.activityInfo.name),
+                iconLoader = { info.loadIcon(manager) }
             )
         }
+        Trace.endSection()
+
+        return entries
     }
 }

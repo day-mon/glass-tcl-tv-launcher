@@ -81,6 +81,20 @@ tasks.register("tvInstall") {
         check(apk.exists()) { "no APK at $apk" }
         check(adb("install", "-r", apk.absolutePath) == 0) { "install failed" }
         adb("shell", "pm", "grant", tvPackage, "android.permission.ACCESS_FINE_LOCATION")
+        // A reinstalled app loses its ahead-of-time output; the home screen is opened constantly.
+        adb("shell", "cmd", "package", "compile", "-m", "speed", "-f", tvPackage)
+    }
+}
+
+tasks.register("tvCompile") {
+    group = "tv"
+    description = "Compile the installed app ahead of time (dex2oat speed). Cuts cold start roughly in half on this TV."
+    dependsOn("tvConnect")
+
+    doLast {
+        check(adb("shell", "cmd", "package", "compile", "-m", "speed", "-f", tvPackage) == 0) {
+            "dex2oat compile failed"
+        }
     }
 }
 

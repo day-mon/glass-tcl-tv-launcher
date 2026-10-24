@@ -72,15 +72,20 @@ class SettingsActivity : ComponentActivity()
     )
     {
         val block = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, 0, 0, dp(26f).toInt())
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, 0, 0, dp(577f).toInt() / 25)
+            gravity = Gravity.CENTER_VERTICAL
         }
-        block.addView(label(getString(titleRes), 13f, 0.16f, 0x8CFFFFFF.toInt()))
+        block.addView(label(getString(titleRes), 13f, 0.16f, 0x8CFFFFFF.toInt()).also { view ->
+            view.layoutParams = LinearLayout.LayoutParams(dp(180f).toInt(), LinearLayout.LayoutParams.WRAP_CONTENT)
+        })
 
         val strip = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(10f).toInt(), 0, 0)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         }
 
         val chips = LinkedHashMap<T, TextView>()
@@ -100,14 +105,15 @@ class SettingsActivity : ComponentActivity()
     private fun addSystemRow(container: LinearLayout)
     {
         val block = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, 0, 0, dp(8f).toInt())
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
         }
-        block.addView(label(getString(R.string.settings_system), 13f, 0.16f, 0x8CFFFFFF.toInt()))
+        block.addView(label(getString(R.string.settings_system), 13f, 0.16f, 0x8CFFFFFF.toInt()).also { view ->
+            view.layoutParams = LinearLayout.LayoutParams(dp(180f).toInt(), LinearLayout.LayoutParams.WRAP_CONTENT)
+        })
 
         val strip = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(10f).toInt(), 0, 0)
         }
         strip.addView(chip(getString(R.string.settings_open)).also { view ->
             view.setOnClickListener {

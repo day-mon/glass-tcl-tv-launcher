@@ -3,6 +3,7 @@ package me.damon.glasshome.ui.home
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Drawable
+import android.os.Trace
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
@@ -11,6 +12,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
+import java.util.concurrent.ConcurrentHashMap
 import me.damon.glasshome.R
 import me.damon.glasshome.ext.move
 import me.damon.glasshome.model.AppEntry
@@ -48,7 +50,8 @@ class AppListAdapter(
 
     private var entries: List<AppEntry> = emptyList()
     private var appearance = Appearance()
-    private val glyphs = mutableMapOf<String, Drawable?>()
+    /** Filled on a background thread by [warm], read on the main thread while binding. */
+    private val iconCache = ConcurrentHashMap<String, Drawable?>()
     private val iconSize: Int = context.resources.getDimensionPixelSize(R.dimen.icon_size)
 
     var moving: Boolean = false
@@ -64,8 +67,10 @@ class AppListAdapter(
     fun applyLook(value: Appearance)
     {
         if (appearance == value) return
+        // A material change is drawn by the pill alone; rebinding rows for it would be wasted work.
+        val relayout = appearance.layout != value.layout || appearance.icons != value.icons
         appearance = value
-        glyphs.clear()
+        if (!relayout) return
         notifyDataSetChanged()
     }
 
@@ -79,6 +84,7 @@ class AppListAdapter(
 
     override fun onBindViewHolder(holder: Holder, position: Int)
     {
+        Trace.beginSection("glasshome:bind")
         val entry = entries[position]
         holder.label.text = entry.label
         val showIcon = appearance.icons == IconStyle.GLYPHS
@@ -89,6 +95,7 @@ class AppListAdapter(
         holder.content.setOnClickListener {
             if (moving) drop() else launch(entry)
         }
+        Trace.endSection()
     }
 
     override fun getItemCount(): Int = entries.size
@@ -129,9 +136,39 @@ class AppListAdapter(
 
     private fun iconOf(entry: AppEntry): Drawable?
     {
+        iconCache[entry.packageName]?.let { return it }
+        IconLibrary.forPackage(entry.packageName)?.let {
+            val drawable = context.getDrawable(it)
+            iconCache[entry.packageName] = drawable
+            return drawable
+        }
+        val icon = entry.icon ?: return null
+        return GlyphIcons.of(icon, iconSize).also { iconCache[entry.packageName] = it }
+    }
+
+    /**
+     * Loads and masks every icon ahead of time. Called off the main thread once the list is known,
+     * so binding a row only ever reads the cache.
+     */
+    fun warm(entries: List<AppEntry>)
+    {
+        if (appearance.icons != IconStyle.GLYPHS) return
+        entries.forEach { entry ->
+            if (!iconCache.containsKey(entry.packageName)) iconCache[entry.packageName] = loadIcon(entry)
+        }
+    }
+
+    /** Rebinds the rows so freshly warmed icons appear, without resetting the list. */
+    fun refreshIcons()
+    {
+        if (itemCount > 0) notifyItemRangeChanged(0, itemCount)
+    }
+
+    private fun loadIcon(entry: AppEntry): Drawable?
+    {
         IconLibrary.forPackage(entry.packageName)?.let { return context.getDrawable(it) }
         val icon = entry.icon ?: return null
-        return glyphs.getOrPut(entry.packageName) { GlyphIcons.of(icon, iconSize) }
+        return GlyphIcons.of(icon, iconSize)
     }
 
     private fun launch(entry: AppEntry)

@@ -3,6 +3,7 @@ package me.damon.glasshome.ui.home
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
+import android.os.Trace
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
@@ -20,7 +21,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.damon.glasshome.GlassHomeApplication
 import me.damon.glasshome.R
 import me.damon.glasshome.ext.dp
@@ -72,6 +75,7 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
     override fun onCreate(savedInstanceState: Bundle?)
     {
         super.onCreate(savedInstanceState)
+        Trace.beginSection("glasshome:onCreate")
         setContentView(R.layout.activity_main)
 
         val root = findViewById<FrameLayout>(R.id.root)
@@ -81,6 +85,7 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
 
         list = findViewById(R.id.appList)
         list.itemAnimator = null
+        list.setHasFixedSize(true)
         adapter = AppListAdapter(this, this)
         list.adapter = adapter
 
@@ -103,6 +108,7 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
                 viewModel.state.collect { render(it) }
             }
         }
+        Trace.endSection()
     }
 
     override fun onResume()
@@ -138,6 +144,19 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
 
     private fun render(state: HomeState)
     {
+        Trace.beginSection("glasshome:render")
+        try
+        {
+            renderState(state)
+        }
+        finally
+        {
+            Trace.endSection()
+        }
+    }
+
+    private fun renderState(state: HomeState)
+    {
         val layout = state.appearance.layout
         if (renderedLayout != layout)
         {
@@ -149,10 +168,21 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
         adapter.applyLook(state.appearance)
         adapter.submit(state.entries)
 
-        if (!focusPlaced && state.entries.isNotEmpty())
-        {
-            focusPlaced = true
-            list.post { focusRow(lastFocusedRow) }
+        // Icons are decoded and masked off the main thread so binding a row stays cheap. Focus is
+        // placed afterwards, so the remote never lands on a row that is about to be rebound.
+        lifecycleScope.launch(Dispatchers.Default) {
+            adapter.warm(state.entries)
+            withContext(Dispatchers.Main)
+            {
+                adapter.refreshIcons()
+                // Focus is placed exactly once, after the rebind. Nothing here may move it later:
+                // doing so steals focus from the corner links or the row the remote is on.
+                if (!focusPlaced && state.entries.isNotEmpty())
+                {
+                    focusPlaced = true
+                    focusRow(lastFocusedRow)
+                }
+            }
         }
     }
 

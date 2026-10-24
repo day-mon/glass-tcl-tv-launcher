@@ -32,6 +32,8 @@ class SettingsScreenTest
         device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
         scenario = ActivityScenario.launch(MainActivity::class.java)
         device.waitForIdle()
+        // The scan runs off the main thread, so the list takes focus a moment after launch.
+        device.wait(Until.hasObject(By.focused(true)), WAIT_MS)
     }
 
     @After

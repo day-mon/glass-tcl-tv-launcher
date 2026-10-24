@@ -112,6 +112,58 @@ Corner link **SETTINGS** → Up/Down between rows, Left/Right between choices, O
 | Icons | `Glyphs` (bundled white logos) · `Names` |
 | System | opens the Android settings |
 
+## Performance
+
+Measured on the TV itself, not in a simulator. `glasshome:*` slices are permanent trace markers
+(`android.os.Trace`), so any capture shows them.
+
+```sh
+# how long the launcher takes to put a frame up (cold, three runs)
+adb shell am force-stop me.damon.glasshome
+adb shell am start -W -n me.damon.glasshome/.ui.home.MainActivity
+
+# frame history
+adb shell dumpsys gfxinfo me.damon.glasshome reset
+
+# ahead-of-time compile: the biggest cold-start lever on this TV
+cd launcher && ./gradlew tvCompile
+```
+
+A Perfetto capture with FrameTimeline, then SQL over it:
+
+```sh
+cat > /tmp/glass.cfg <<'EOF'
+buffers { size_kb: 32768 fill_policy: RING_BUFFER }
+data_sources { config { name: "linux.ftrace" ftrace_config {
+  atrace_categories: "gfx" atrace_categories: "view" atrace_categories: "wm"
+  atrace_categories: "am" atrace_categories: "dalvik" atrace_categories: "res"
+  atrace_apps: "me.damon.glasshome" } } }
+data_sources { config { name: "android.surfaceflinger.frametimeline" } }
+duration_ms: 9000
+EOF
+cat /tmp/glass.cfg | adb shell "perfetto -c - --txt -o /data/misc/perfetto-traces/g.pftrace"
+```
+
+### What the numbers said
+
+| Stage | Before | After | Change |
+| --- | --- | --- | --- |
+| Cold start (`am start -W`) | 1684 ms | ~820 ms (best 676) | −51% |
+| Icon loads during scan | 160 ms | 0 (lazy) | gone |
+| Scan total | 373 ms | 136 ms | −64% |
+| Main-thread row binds | 90 ms / 11 rows (8 ms each) | 31 ms / 22 rows (1.4 ms each) | −83% |
+| `onCreate` | 327 ms | 210 ms | −36% |
+| Janky frames (trace) | 47% | 36% | −11 pts |
+
+The wins, in order of size:
+
+1. **Ahead-of-time compile** (`tvInstall` runs `cmd package compile -m speed -f`): −400 ms.
+2. **Scan off the main thread** (`HomeRepository.refresh` on `Dispatchers.Default`): the largest
+   single main-thread stall was the app scan in `onResume`.
+3. **Lazy icons + background warm**: icons are no longer loaded for every installed app, only for
+   rows that get drawn, and they are decoded/masked off the main thread.
+4. **1280×720 wallpaper** instead of 1920×1080: less JPEG decode inside `onCreate`.
+
 ## Licence
 
 MIT — see [LICENSE](LICENSE). Upstream copyrights and asset credits are in [NOTICE.md](NOTICE.md).

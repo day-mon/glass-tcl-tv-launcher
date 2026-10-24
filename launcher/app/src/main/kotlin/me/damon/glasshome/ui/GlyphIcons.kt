@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.os.Trace
 import kotlin.math.max
 import kotlin.math.min
 
@@ -24,6 +25,19 @@ object GlyphIcons
     private const val INVERT_ABOVE = 0.45f
 
     fun of(icon: Drawable, size: Int): Drawable
+    {
+        Trace.beginSection("glasshome:glyph")
+        try
+        {
+            return bitmapOf(icon, size)
+        }
+        finally
+        {
+            Trace.endSection()
+        }
+    }
+
+    private fun bitmapOf(icon: Drawable, size: Int): Drawable
     {
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val copy = icon.constantState?.newDrawable()?.mutate() ?: icon
