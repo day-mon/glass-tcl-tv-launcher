@@ -76,6 +76,8 @@ class SettingsActivity : ComponentActivity()
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, 0, 0, dp(577f).toInt() / 25)
             gravity = Gravity.CENTER_VERTICAL
+            clipChildren = false
+            clipToPadding = false
         }
         block.addView(label(getString(titleRes), 13f, 0.16f, 0x8CFFFFFF.toInt()).also { view ->
             view.layoutParams = LinearLayout.LayoutParams(dp(180f).toInt(), LinearLayout.LayoutParams.WRAP_CONTENT)
@@ -84,6 +86,10 @@ class SettingsActivity : ComponentActivity()
         val strip = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            // Room for the focus pop, which would otherwise be clipped at the top.
+            setPadding(0, dp(8f).toInt(), dp(8f).toInt(), dp(8f).toInt())
+            clipChildren = false
+            clipToPadding = false
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
             )
@@ -115,6 +121,9 @@ class SettingsActivity : ComponentActivity()
 
         val strip = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
+            setPadding(0, dp(8f).toInt(), 0, dp(8f).toInt())
+            clipChildren = false
+            clipToPadding = false
         }
         strip.addView(chip(getString(R.string.settings_open)).also { view ->
             view.setOnClickListener {
@@ -144,7 +153,7 @@ class SettingsActivity : ComponentActivity()
         isClickable = true
         setPadding(dp(20f).toInt(), dp(11f).toInt(), dp(20f).toInt(), dp(11f).toInt())
         setOnFocusChangeListener { view, focused ->
-            val scale = if (focused) 1.06f else 1f
+            val scale = if (focused) 1.04f else 1f
             view.animate().scaleX(scale).scaleY(scale)
                 .setDuration(Motion.duration(this@SettingsActivity, 140)).start()
         }

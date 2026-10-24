@@ -38,6 +38,7 @@ fun exec(vararg command: String): Int
 
 fun adb(vararg args: String): Int = exec(adbExecutable, "-s", tvDevice, *args)
 
+/** A port that accepts a connection; on its own this does not prove the far end is alive. */
 fun tunnelIsUp(): Boolean = try
 {
     java.net.Socket("127.0.0.1", tvPort.toInt()).close()
@@ -48,6 +49,34 @@ catch (error: Exception)
     false
 }
 
+/** True only when adb can actually run a command on the TV, not merely open a socket. */
+fun deviceAnswers(): Boolean =
+    exec(adbExecutable, "-s", tvDevice, "shell", "true") == 0
+
+fun openTunnel()
+{
+    val started = exec(
+        "ssh", "-f", "-N",
+        "-L", "127.0.0.1:$tvPort:$tvIp:$tvPort",
+        "-o", "BatchMode=yes",
+        "-o", "ExitOnForwardFailure=yes",
+        // Without these a dead link keeps the local port open and every adb call fails as "closed".
+        "-o", "ServerAliveInterval=15",
+        "-o", "ServerAliveCountMax=3",
+        tvRouter
+    )
+    check(started == 0) { "could not open the tunnel; is $tvRouter reachable?" }
+    Thread.sleep(1_000)
+}
+
+fun closeStaleTunnel()
+{
+    if (!tunnelIsUp()) return
+    logger.lifecycle("tunnel is stale; reopening")
+    exec("pkill", "-f", "127.0.0.1:$tvPort:$tvIp:$tvPort")
+    Thread.sleep(500)
+}
+
 tasks.register("tvConnect") {
     group = "tv"
     description = "Forward adb to the TV and register the device."
@@ -56,18 +85,21 @@ tasks.register("tvConnect") {
         if (!tunnelIsUp())
         {
             logger.lifecycle("tunnel 127.0.0.1:$tvPort -> $tvRouter -> $tvIp:$tvPort")
-            val started = exec(
-                "ssh", "-f", "-N",
-                "-L", "127.0.0.1:$tvPort:$tvIp:$tvPort",
-                "-o", "BatchMode=yes",
-                "-o", "ExitOnForwardFailure=yes",
-                tvRouter
-            )
-            check(started == 0) { "could not open the tunnel; is $tvRouter reachable?" }
-            Thread.sleep(1_000)
+            openTunnel()
         }
         check(tunnelIsUp()) { "nothing listening on 127.0.0.1:$tvPort" }
-        check(exec(adbExecutable, "connect", tvDevice) == 0) { "adb connect $tvDevice failed" }
+        exec(adbExecutable, "connect", tvDevice)
+
+        if (!deviceAnswers())
+        {
+            // The port was open but the far end was gone: rebuild the tunnel once.
+            closeStaleTunnel()
+            openTunnel()
+            exec(adbExecutable, "connect", tvDevice)
+            check(deviceAnswers()) {
+                "the TV did not answer through the tunnel; check that $tvRouter can reach $tvIp"
+            }
+        }
     }
 }
 
