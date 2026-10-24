@@ -18,4 +18,11 @@
     <string name="offline">Offline</string>
     <string name="rearranging">Move with Up/Down · OK to finish</string>
     <string name="order_saved">Order saved</string>
+    <string name="settings_subtitle">Appearance</string>
+    <string name="settings_hint">OK to choose · Back to return</string>
+    <string name="settings_layout">Layout</string>
+    <string name="settings_material">Material</string>
+    <string name="settings_icons">Icons</string>
+    <string name="settings_system">System</string>
+    <string name="settings_open">Open Android settings</string>
 </resources>

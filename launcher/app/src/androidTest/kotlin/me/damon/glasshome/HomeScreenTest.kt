@@ -10,7 +10,8 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
-import me.damon.glasshome.model.AppOrder
+import me.damon.glasshome.data.AppOrder
+import me.damon.glasshome.ui.home.MainActivity
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals

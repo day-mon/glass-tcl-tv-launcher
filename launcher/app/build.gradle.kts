@@ -40,6 +40,10 @@ kotlin {
 dependencies {
     implementation("androidx.recyclerview:recyclerview:1.4.0")
     implementation("androidx.dynamicanimation:dynamicanimation:1.1.0")
+    implementation("androidx.activity:activity-ktx:1.13.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.17")

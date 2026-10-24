@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Same room as the home screen, held back so the options read first. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/settingsRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF000000">
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:alpha="0.55"
+        android:src="@drawable/wallpaper_alpine"
+        android:contentDescription="@null" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/scrim" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingStart="60dp"
+        android:paddingEnd="60dp"
+        android:paddingTop="48dp"
+        android:paddingBottom="104dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/settings"
+                android:textColor="#F2FFFFFF"
+                android:textSize="30sp"
+                android:fontFamily="@font/outfit"
+                android:fontVariationSettings="'wght' 300"
+                android:letterSpacing="-0.01"
+                android:includeFontPadding="false" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/settings_subtitle"
+                android:textColor="#8CFFFFFF"
+                android:textSize="12sp"
+                android:fontFamily="@font/outfit"
+                android:letterSpacing="0.18"
+                android:textAllCaps="true" />
+
+            <LinearLayout
+                android:id="@+id/rows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="34dp"
+                android:orientation="vertical" />
+        </LinearLayout>
+    </ScrollView>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="60dp"
+        android:layout_marginBottom="34dp"
+        android:text="@string/settings_hint"
+        android:textColor="#99FFFFFF"
+        android:textSize="13sp"
+        android:fontFamily="@font/outfit"
+        android:letterSpacing="0.10" />
+</FrameLayout>

@@ -91,7 +91,7 @@ tasks.register("tvLaunch") {
 
     doLast {
         adb("shell", "am", "force-stop", tvPackage)
-        adb("shell", "am", "start", "-n", "$tvPackage/.MainActivity")
+        adb("shell", "am", "start", "-n", "$tvPackage/.ui.home.MainActivity")
     }
 }
 

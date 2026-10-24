@@ -1,7 +1,8 @@
 # glass-tcl-tv-launcher
 
 A quiet home screen for a TCL Google TV: a photograph, the time, and a left-aligned list of apps
-that the remote walks down. One glass pill springs between rows; long-press a row to rearrange.
+that the remote walks down. One glass pill springs between rows; long-press a row to rearrange, and
+a settings screen switches between the list and a dock, three pill materials and glyphs-or-names.
 
 Modelled on [CleanFrame](https://github.com/nthnclrk/CleanFrame) (Samsung Tizen, HTML/CSS), rebuilt
 as a native Android launcher. Code derived from [tv-vibehack](https://github.com/Gathin23/tv-vibehack).
@@ -67,27 +68,49 @@ Once you rearrange the list on the TV, that order is stored in `SharedPreference
 Bundled glyphs live in `glyphs/*.svg`; add one there and run `./gradlew generateGlyphs`, then map
 the package to it in `ui/IconLibrary.kt`.
 
-## Code layout
+## How it is put together
+
+Single source of truth, no DI framework:
+
+```
+GlassHomeApplication  ->  AppContainer  ->  HomeRepository  (StateFlow<HomeState>)
+                                                 |
+                        HomeViewModel / SettingsViewModel  (collect, expose state)
+                                                 |
+                        MainActivity / SettingsActivity  (render, forward input)
+```
+
+`HomeRepository` owns the installed-app scan, the saved order and the appearance choices.
+`SettingsActivity` writes to it; `MainActivity` collects from it, so a change made in settings is the
+state the home screen resumes with — no re-reading preferences in `onResume`.
 
 ```
 launcher/app/src/main/kotlin/me/damon/glasshome/
-├── MainActivity.kt             wires the screen together
-├── ext/list.kt, ext/view.kt     small helpers
-├── model/                       AppEntry, AppOrder (saved order), AppSorter
-└── ui/
-    ├── AppListAdapter.kt        rows, focus opacity, launching, rearranging
-    ├── GlassPillController.kt   sizing, springs and fading of the pill
-    ├── GlassPillView.kt         the drawn glass slab
-    ├── GlyphIcons.kt            white-glyph extraction for unmatched icons
-    ├── IconLibrary.kt           bundled glyph per package
-    ├── CornerLinks.kt           D-pad behaviour of the bottom-right stack
-    ├── ConnectionLabel.kt       Wi-Fi name or connection type
-    ├── InputsMenu.kt            HDMI/AV/Live TV dropdown
-    └── RemoteLongPress.kt       long-press detection for a remote's select key
+├── GlassHomeApplication.kt      application + tiny container
+├── data/
+│   ├── AppOrder.kt              saved order of the list
+│   ├── HomeSettings.kt          appearance storage
+│   └── HomeRepository.kt        scan + state
+├── model/                       AppEntry, AppSorter, Appearance/HomeState
+├── ui/home/                     MainActivity, HomeViewModel, AppListAdapter
+├── ui/settings/                 SettingsActivity, SettingsViewModel
+└── ui/                          GlassPill*, GlyphIcons, IconLibrary, CornerLinks,
+                                 ConnectionLabel, InputsMenu, RemoteLongPress
 
 launcher/app/src/test/           JVM tests (Robolectric)
 launcher/app/src/androidTest/    instrumented tests, run on a device
 ```
+
+## Settings screen
+
+Corner link **SETTINGS** → Up/Down between rows, Left/Right between choices, OK to apply.
+
+| Option | Values |
+| --- | --- |
+| Layout | `List` (left column) · `Dock` (row along the bottom, links move under the clock) |
+| Material | `Glass` · `Clear` · `Solid` |
+| Icons | `Glyphs` (bundled white logos) · `Names` |
+| System | opens the Android settings |
 
 ## Licence
 

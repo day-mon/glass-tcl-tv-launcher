@@ -9,6 +9,7 @@ import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
 import androidx.recyclerview.widget.RecyclerView
 import me.damon.glasshome.ext.dp
+import me.damon.glasshome.model.PillMaterial
 import kotlin.math.min
 
 /** Sizes, moves and fades the glass pill behind whichever row has focus. */
@@ -75,6 +76,11 @@ class GlassPillController(
         pill.translationY = y
         pill.animate().alpha(1f).setDuration(200).start()
         shown = true
+    }
+
+    fun setMaterial(material: PillMaterial)
+    {
+        pill.setMaterial(material)
     }
 
     fun hide()

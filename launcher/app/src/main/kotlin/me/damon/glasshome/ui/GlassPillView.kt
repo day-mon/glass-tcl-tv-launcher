@@ -10,6 +10,7 @@ import android.graphics.Shader
 import android.util.AttributeSet
 import android.view.View
 import me.damon.glasshome.ext.dp
+import me.damon.glasshome.model.PillMaterial
 
 /**
  * A translucent smoked-glass slab: dark tint, faint sheen, bright rim and a soft outer glow.
@@ -31,6 +32,7 @@ class GlassPillView @JvmOverloads constructor(
     val inset = context.dp(6f)
 
     private var radius = context.dp(20f)
+    private var material = PillMaterial.GLASS
 
     init
     {
@@ -46,13 +48,34 @@ class GlassPillView @JvmOverloads constructor(
         invalidate()
     }
 
+    fun setMaterial(value: PillMaterial)
+    {
+        material = value
+        onSizeChanged(width, height, 0, 0)
+        invalidate()
+    }
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int)
     {
         super.onSizeChanged(w, h, oldw, oldh)
-        fill.shader = LinearGradient(0f, 0f, 0f, h.toFloat(), 0x80000000.toInt(), 0x4D000000, Shader.TileMode.CLAMP)
+        // Smoked glass, a pale frosted tint, or a flat slab.
+        val (top, bottom) = when (material)
+        {
+            PillMaterial.GLASS -> 0xA0000000.toInt() to 0x4D000000
+            PillMaterial.CLEAR -> 0x33FFFFFF to 0x14FFFFFF
+            PillMaterial.SOLID -> 0xF2191919.toInt() to 0xF2101010.toInt()
+        }
+        fill.shader = LinearGradient(0f, 0f, 0f, h.toFloat(), top, bottom, Shader.TileMode.CLAMP)
         specular.shader = LinearGradient(
-            0f, 0f, 0f, h * 0.45f, 0x26FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP
+            0f, 0f, 0f, h * 0.45f, if (material == PillMaterial.SOLID) 0x12FFFFFF else 0x2EFFFFFF,
+            0x00FFFFFF, Shader.TileMode.CLAMP
         )
+        rim.color = when (material)
+        {
+            PillMaterial.GLASS -> 0x66FFFFFF
+            PillMaterial.CLEAR -> 0x99FFFFFF.toInt()
+            PillMaterial.SOLID -> 0x33FFFFFF
+        }
     }
 
     override fun onDraw(canvas: Canvas)

@@ -1,4 +1,4 @@
-package me.damon.glasshome.model
+package me.damon.glasshome.data
 
 import android.content.Context
 import android.content.SharedPreferences

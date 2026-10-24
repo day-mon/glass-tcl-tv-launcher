@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One tile of the dock layout: glyph over name, sized for the remote. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:paddingTop="3dp"
+    android:paddingBottom="3dp"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingStart="18dp"
+        android:paddingEnd="18dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="12dp"
+        android:focusable="true"
+        android:clickable="true">
+
+        <ImageView
+            android:id="@+id/icon"
+            android:layout_width="@dimen/icon_size"
+            android:layout_height="@dimen/icon_size"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:id="@+id/label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:maxWidth="120dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:textColor="#FFFFFFFF"
+            android:textSize="14sp"
+            android:fontFamily="@font/outfit"
+            android:fontVariationSettings="'wght' 400" />
+    </LinearLayout>
+</FrameLayout>
