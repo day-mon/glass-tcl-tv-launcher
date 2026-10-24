@@ -11,6 +11,8 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AnimationUtils
+import android.view.animation.LayoutAnimationController
 import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -34,6 +36,7 @@ import me.damon.glasshome.ui.ConnectionLabel
 import me.damon.glasshome.ui.CornerLinks
 import me.damon.glasshome.ui.GlassPillController
 import me.damon.glasshome.ui.InputsMenu
+import me.damon.glasshome.ui.Motion
 import me.damon.glasshome.ui.RemoteLongPress
 import me.damon.glasshome.ui.settings.SettingsActivity
 import kotlin.math.max
@@ -55,8 +58,10 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
     private lateinit var inputs: InputsMenu
     private lateinit var btnWifi: TextView
     private lateinit var sideLinks: View
+    private lateinit var listFade: View
 
     private var renderedLayout: LayoutMode? = null
+    private var entrancePlayed = false
     private var lastFocusedRow = 0
     private var focusPlaced = false
 
@@ -81,6 +86,7 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
         val root = findViewById<FrameLayout>(R.id.root)
         btnWifi = findViewById(R.id.btnWifi)
         sideLinks = findViewById(R.id.sideLinks)
+        listFade = findViewById(R.id.listFade)
         inputs = InputsMenu(this, root)
 
         list = findViewById(R.id.appList)
@@ -114,6 +120,8 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
     override fun onResume()
     {
         super.onResume()
+        // Undo the launch feedback in case the app we opened did not cover the screen.
+        resetRowTransforms()
         viewModel.reload()
         refreshConnectionLabel()
         handler.postDelayed(minuteTick, MINUTE_MS)
@@ -180,6 +188,7 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
                 if (!focusPlaced && state.entries.isNotEmpty())
                 {
                     focusPlaced = true
+                    playEntrance()
                     focusRow(lastFocusedRow)
                 }
             }
@@ -191,6 +200,7 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
     {
         val params = list.layoutParams as FrameLayout.LayoutParams
         val links = sideLinks.layoutParams as FrameLayout.LayoutParams
+        listFade.visibility = if (mode == LayoutMode.LIST) View.VISIBLE else View.GONE
 
         if (mode == LayoutMode.DOCK)
         {
@@ -251,6 +261,45 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
     {
         viewModel.saveOrder(entries)
         toast(R.string.order_saved)
+    }
+
+    override fun onAppSelected(entry: AppEntry, content: View)
+    {
+        if (!Motion.enabled(this))
+        {
+            adapter.launch(entry)
+            return
+        }
+
+        // The tile presses in and the list steps back, so the intent has something to land on.
+        val press = Motion.duration(this, 120)
+        content.animate().scaleX(0.94f).scaleY(0.94f).setDuration(press).start()
+        list.animate().alpha(0.82f).setDuration(press).start()
+        list.postDelayed({ adapter.launch(entry) }, press)
+    }
+
+    private fun playEntrance()
+    {
+        if (entrancePlayed || !Motion.enabled(this)) return
+        entrancePlayed = true
+        list.layoutAnimation = LayoutAnimationController(
+            AnimationUtils.loadAnimation(this, R.anim.row_enter), 0.05f
+        )
+        list.scheduleLayoutAnimation()
+    }
+
+    private fun resetRowTransforms()
+    {
+        list.animate().cancel()
+        list.alpha = 1f
+        for (index in 0 until list.childCount)
+        {
+            list.getChildAt(index).findViewById<View>(R.id.content)?.apply {
+                animate().cancel()
+                scaleX = 1f
+                scaleY = 1f
+            }
+        }
     }
 
     private fun pickUpFocusedRow()

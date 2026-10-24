@@ -23,7 +23,7 @@ import me.damon.glasshome.ui.GlyphIcons
 import me.damon.glasshome.ui.IconLibrary
 
 /** Rows without focus sit back so the focused one reads instantly from across the room. */
-private const val ALPHA_LABEL_IDLE = 0.40f
+private const val ALPHA_LABEL_IDLE = 0.44f
 private const val ALPHA_ICON_IDLE = 0.50f
 
 /**
@@ -46,6 +46,9 @@ class AppListAdapter(
         fun onRowMoved(position: Int)
 
         fun onRowDropped(entries: List<AppEntry>)
+
+        /** A row was chosen; [content] is the row to animate before the intent goes out. */
+        fun onAppSelected(entry: AppEntry, content: View)
     }
 
     private var entries: List<AppEntry> = emptyList()
@@ -92,8 +95,8 @@ class AppListAdapter(
         holder.icon.setImageDrawable(if (showIcon) iconOf(entry) else null)
         holder.setFocused(holder.content.hasFocus())
 
-        holder.content.setOnClickListener {
-            if (moving) drop() else launch(entry)
+        holder.content.setOnClickListener { view ->
+            if (moving) drop() else listener.onAppSelected(entry, view)
         }
         Trace.endSection()
     }
@@ -171,7 +174,7 @@ class AppListAdapter(
         return GlyphIcons.of(icon, iconSize)
     }
 
-    private fun launch(entry: AppEntry)
+    fun launch(entry: AppEntry)
     {
         val intent = Intent(Intent.ACTION_MAIN)
             .addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)

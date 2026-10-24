@@ -20,6 +20,7 @@ import me.damon.glasshome.model.Appearance
 import me.damon.glasshome.model.IconStyle
 import me.damon.glasshome.model.LayoutMode
 import me.damon.glasshome.model.PillMaterial
+import me.damon.glasshome.ui.Motion
 
 /**
  * Appearance options, chosen with the remote: Up/Down between rows, Left/Right between the choices
@@ -142,6 +143,11 @@ class SettingsActivity : ComponentActivity()
         isFocusable = true
         isClickable = true
         setPadding(dp(20f).toInt(), dp(11f).toInt(), dp(20f).toInt(), dp(11f).toInt())
+        setOnFocusChangeListener { view, focused ->
+            val scale = if (focused) 1.06f else 1f
+            view.animate().scaleX(scale).scaleY(scale)
+                .setDuration(Motion.duration(this@SettingsActivity, 140)).start()
+        }
         val params = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
         )

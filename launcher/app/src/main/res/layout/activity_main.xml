@@ -43,6 +43,15 @@
         android:overScrollMode="never"
         android:scrollbars="none" />
 
+    <!-- Softens the bottom edge where the list runs off screen. -->
+    <View
+        android:id="@+id/listFade"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/list_fade"
+        android:importantForAccessibility="no" />
+
     <!-- Clock, top right. -->
     <TextClock
         android:id="@+id/clock"
