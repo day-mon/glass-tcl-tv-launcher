@@ -12,3 +12,6 @@ buildscript {
 plugins {
     id("com.android.application") version "9.4.1" apply false
 }
+
+// Regenerate res/drawable/glyph_*.xml from launcher/glyphs/*.svg
+apply(from = "gradle/glyphs.gradle.kts")

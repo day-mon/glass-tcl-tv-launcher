@@ -1,11 +1,11 @@
 # glass-tcl-tv-launcher
 
 A quiet home screen for a TCL Google TV: a photograph, the time, and a left-aligned list of apps
-that the remote walks down. One glass pill springs between rows.
+that the remote walks down. One glass pill springs between rows; long-press a row to rearrange.
 
-Modelled on [CleanFrame](https://github.com/nthnclrk/CleanFrame) (Samsung Tizen, HTML/CSS),
-rebuilt as a native Android launcher on top of [tv-vibehack](https://github.com/Gathin23/tv-vibehack).
-See [NOTICE.md](NOTICE.md) for attribution.
+Modelled on [CleanFrame](https://github.com/nthnclrk/CleanFrame) (Samsung Tizen, HTML/CSS), rebuilt
+as a native Android launcher. Code derived from [tv-vibehack](https://github.com/Gathin23/tv-vibehack).
+Attribution and asset credits: [NOTICE.md](NOTICE.md).
 
 ![The launcher running on the TV](docs/running.jpg)
 
@@ -15,66 +15,79 @@ See [NOTICE.md](NOTICE.md) for attribution.
 | --- | --- |
 | Hardware | TCL smart TV, Android TV 12 (SDK 31), 4K panel with the UI overridden to 1920×1080 @ 320dpi |
 | Package | `me.damon.glasshome` |
-| Replaces | the stock Google TV launcher, or any third-party launcher (Projectivy here) |
+| Replaces | the stock Google TV launcher, or any third-party launcher |
 
-## Build and install
+## Everything is a Gradle task
 
-Needs JDK 25 (or 17), the Android SDK with platform 36 and build-tools 36, and the Python helpers in
-`tools/`.
+Requires JDK 25 (or 17), the Android SDK (platform 36, build-tools 36), and `adb`. No Python, no
+Node, no wrapper scripts.
 
 ```sh
-~/.local/bin/uv venv tools/venv
-~/.local/bin/uv pip install --python tools/venv/bin/python -r tools/requirements.txt
-export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
+cd launcher
 
-# If the Mac cannot reach the TV's VLAN, forward ADB through a host that can:
-scripts/adb-tunnel.sh
-
-TV_HOST=127.0.0.1 launcher/build-and-install.sh          # install and open
-SET_HOME=1 TV_HOST=127.0.0.1 launcher/build-and-install.sh   # also make it the Home app
+./gradlew generateGlyphs   # SVGs in glyphs/ -> res/drawable/glyph_*.xml
+./gradlew testDebugUnitTest  # 17 JVM tests (Robolectric), ~11 s, no device
+./gradlew tvInstall        # build + install on the TV
+./gradlew tvLaunch         # open it
+./gradlew tvHome           # make it the Home app
+./gradlew tvTest           # 7 instrumented tests, on the TV
+./gradlew tvScreenshot     # save the current screen to app/build/screen.png
+./gradlew tvDebloat        # apply examples/<tv>/debloat.txt
+./gradlew tvRestore        # undo it
 ```
 
-Revert Home to the previous launcher at any time:
+The TV usually sits on a different VLAN than this Mac, so `tvConnect` (a dependency of every `tv*`
+task) forwards a local port to the set through an SSH host that can reach it, then points `adb` at
+that port. Override the defaults with `-P`:
 
 ```sh
-TV_HOST=127.0.0.1 tools/venv/bin/python -I tools/tv.py \
-  'cmd package set-home-activity --user 0 com.spocky.projengmenu'
+./gradlew tvInstall -PtvIp=192.168.1.50 -PtvRouter=my-router
+```
+
+Revert Home to a previous launcher at any time:
+
+```sh
+adb shell cmd package set-home-activity --user 0 <old.package>
 ```
 
 ## Configure it
 
-`launcher/app/src/main/res/values/config.xml`:
+`app/src/main/res/values/config.xml`:
 
 | Setting | Meaning |
 | --- | --- |
-| `home_apps` | Pinned first, in order. Everything else is alphabetical. |
+| `home_apps` | Seed order: pinned first, everything else alphabetical. |
 | `hidden_apps` | Never listed (the Live TV tuner is covered by the Inputs menu). |
 | `live_tv_package` | Appended to the Inputs dropdown. |
-| `show_icons` | Off by default: TV icons are coloured tiles, and a grey silhouette reads as a box. |
+| `show_icons` / `glass_icons` | Names only, or white glyphs extracted from the app icons. |
 
-Wallpapers live in `launcher/app/src/main/res/drawable-nodpi/`.
+Once you rearrange the list on the TV, that order is stored in `SharedPreferences` and wins over
+`home_apps`.
 
-## Layout of the code
+Bundled glyphs live in `glyphs/*.svg`; add one there and run `./gradlew generateGlyphs`, then map
+the package to it in `ui/IconLibrary.kt`.
+
+## Code layout
 
 ```
 launcher/app/src/main/kotlin/me/damon/glasshome/
-├── MainActivity.kt          wires the screen together
-├── ext/view.kt              dp helper
-├── model/AppEntry.kt        one launchable app
+├── MainActivity.kt             wires the screen together
+├── ext/list.kt, ext/view.kt     small helpers
+├── model/                       AppEntry, AppOrder (saved order), AppSorter
 └── ui/
-    ├── AppListAdapter.kt    rows, focus opacity, launch intents
-    ├── GlassPillController.kt sizing, springs and fading of the pill
-    ├── GlassPillView.kt     the drawn glass slab
-    ├── CornerLinks.kt       D-pad behaviour of the bottom-right stack
-    ├── ConnectionLabel.kt   Wi-Fi name or connection type
-    └── InputsMenu.kt        HDMI/AV/Live TV dropdown
+    ├── AppListAdapter.kt        rows, focus opacity, launching, rearranging
+    ├── GlassPillController.kt   sizing, springs and fading of the pill
+    ├── GlassPillView.kt         the drawn glass slab
+    ├── GlyphIcons.kt            white-glyph extraction for unmatched icons
+    ├── IconLibrary.kt           bundled glyph per package
+    ├── CornerLinks.kt           D-pad behaviour of the bottom-right stack
+    ├── ConnectionLabel.kt       Wi-Fi name or connection type
+    ├── InputsMenu.kt            HDMI/AV/Live TV dropdown
+    └── RemoteLongPress.kt       long-press detection for a remote's select key
+
+launcher/app/src/test/           JVM tests (Robolectric)
+launcher/app/src/androidTest/    instrumented tests, run on a device
 ```
-
-## Tools
-
-`tools/tv.py` is a pure-Python ADB client (works where the `adb` binary is blocked),
-`tools/b64push.py` uploads APKs in chunks, `tools/disable.sh` / `tools/restore.sh` apply and undo a
-debloat list (`examples/tcl-g10-google-tv/debloat.txt`).
 
 ## Licence
 

@@ -19,6 +19,7 @@ import me.damon.glasshome.ui.ConnectionLabel
 import me.damon.glasshome.ui.CornerLinks
 import me.damon.glasshome.ui.GlassPillController
 import me.damon.glasshome.ui.InputsMenu
+import me.damon.glasshome.ui.RemoteLongPress
 import kotlin.math.max
 import kotlin.math.min
 
@@ -36,6 +37,8 @@ class MainActivity : Activity(), AppListAdapter.Listener
     private lateinit var btnWifi: TextView
 
     private var lastFocusedRow = 0
+
+    private val longPress = RemoteLongPress { pickUpFocusedRow() }
 
     private val handler = Handler(Looper.getMainLooper())
     private val minuteTick = object : Runnable
@@ -96,9 +99,22 @@ class MainActivity : Activity(), AppListAdapter.Listener
         handler.removeCallbacks(minuteTick)
     }
 
-    @Deprecated("Home screen: Back goes nowhere.")
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean
+    {
+        if (longPress.handle(event)) return true
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun pickUpFocusedRow()
+    {
+        val position = adapter.positionOf(currentFocus)
+        if (position != androidx.recyclerview.widget.RecyclerView.NO_POSITION) adapter.pickUp(position)
+    }
+
+    @Deprecated("Home screen: Back only finishes rearranging.")
     override fun onBackPressed()
     {
+        if (adapter.moving) adapter.drop()
     }
 
     override fun onRowFocused(position: Int, content: View)
@@ -111,6 +127,26 @@ class MainActivity : Activity(), AppListAdapter.Listener
     {
         if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) findViewById<View>(R.id.btnInputs).requestFocus()
         return true
+    }
+
+    override fun onRowPickedUp(position: Int)
+    {
+        toast(R.string.rearranging)
+    }
+
+    override fun onRowMoved(position: Int)
+    {
+        focusRow(position)
+    }
+
+    override fun onRowDropped()
+    {
+        toast(R.string.order_saved)
+    }
+
+    private fun toast(message: Int)
+    {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
     private fun cornerStack(): List<View> = listOf(
