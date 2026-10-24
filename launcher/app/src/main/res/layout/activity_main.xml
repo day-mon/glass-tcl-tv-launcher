@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- CleanFrame, native: a photograph, the time, and a left-hand list of apps the remote walks down. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF000000">
+
+    <ImageView
+        android:id="@+id/wallpaper"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/wallpaper_alpine"
+        android:contentDescription="@null" />
+
+    <View
+        android:id="@+id/scrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/scrim" />
+
+    <!-- The single glass pill, kept behind the list so names stay crisp on top of it. -->
+    <me.damon.glasshome.ui.GlassPillView
+        android:id="@+id/glass"
+        android:layout_width="10dp"
+        android:layout_height="10dp"
+        android:alpha="0"
+        android:importantForAccessibility="no" />
+
+    <!-- App list. Full height with padding, so it scrolls rather than growing past the screen. -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/appList"
+        android:layout_width="660dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:paddingStart="42dp"
+        android:paddingEnd="0dp"
+        android:paddingTop="92dp"
+        android:paddingBottom="24dp"
+        android:clipToPadding="false"
+        android:clipChildren="false"
+        android:overScrollMode="never"
+        android:scrollbars="none" />
+
+    <!-- Clock, top right. -->
+    <TextClock
+        android:id="@+id/clock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="38dp"
+        android:layout_marginEnd="52dp"
+        android:format12Hour="h:mm"
+        android:format24Hour="HH:mm"
+        android:includeFontPadding="false"
+        android:textColor="#F2FFFFFF"
+        android:textSize="30sp"
+        android:fontFamily="@font/outfit"
+        android:fontVariationSettings="'wght' 300"
+        android:letterSpacing="-0.02"
+        android:shadowColor="#33000000"
+        android:shadowDx="0"
+        android:shadowDy="2"
+        android:shadowRadius="8" />
+
+    <!-- Corner links, bottom right. -->
+    <LinearLayout
+        android:id="@+id/sideLinks"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|bottom"
+        android:layout_marginEnd="44dp"
+        android:layout_marginBottom="38dp"
+        android:orientation="vertical"
+        android:gravity="end">
+
+        <TextView
+            android:id="@+id/btnInputs"
+            style="@style/SideLink"
+            android:text="@string/inputs" />
+
+        <TextView
+            android:id="@+id/btnWifi"
+            style="@style/SideLink"
+            android:text="@string/wifi" />
+
+        <TextView
+            android:id="@+id/btnSettings"
+            style="@style/SideLink"
+            android:text="@string/settings" />
+    </LinearLayout>
+</FrameLayout>

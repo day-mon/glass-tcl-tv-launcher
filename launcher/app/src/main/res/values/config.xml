@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launcher configuration. Edit this file, then run launcher/build-and-install.sh.
+  Package names: on the TV run `pm list packages` (tools/tv.py 'pm list packages').
+-->
+<resources>
+
+    <!-- Apps pinned to the top of the list, in this order. Everything else follows alphabetically.
+         Missing apps are skipped. -->
+    <string-array name="home_apps">
+        <item>com.netflix.ninja</item>
+        <item>com.amazon.amazonvideo.livingroom</item>
+        <item>com.google.android.youtube.tv</item>
+        <item>com.disney.disneyplus</item>
+    </string-array>
+
+    <!-- Apps never shown in the list (e.g. the Live TV app, which the Inputs menu already covers). -->
+    <string-array name="hidden_apps">
+        <item>com.mediatek.wwtv.tvcenter</item>
+        <item>com.mitv.gallery</item>
+    </string-array>
+
+    <!-- The TV's Live TV / tuner app, offered at the end of the Inputs menu. Leave empty to omit. -->
+    <string name="live_tv_package" translatable="false">com.mediatek.wwtv.tvcenter</string>
+
+    <!-- Show each app's icon next to its name. Off by default: TV icons are coloured tiles, and
+         neither the colour nor a grey silhouette suits this look. Names alone match the reference. -->
+    <bool name="show_icons">false</bool>
+
+    <!-- Only used when show_icons is on: strip the colour out of the icons. -->
+    <bool name="monochrome_icons">true</bool>
+</resources>

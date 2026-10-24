@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keeps the left column and the bottom-right links readable on bright photographs. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Left to right: shade behind the app list, gone by ~60% of the width. -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="0"
+                android:startColor="#A6000000"
+                android:centerColor="#4D000000"
+                android:endColor="#00000000"
+                android:centerX="0.35" />
+        </shape>
+    </item>
+
+    <!-- Bottom to top: gentle lift so the corner links never sit on white. -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="90"
+                android:startColor="#66000000"
+                android:centerColor="#1A000000"
+                android:endColor="#00000000"
+                android:centerY="0.25" />
+        </shape>
+    </item>
+</layer-list>
