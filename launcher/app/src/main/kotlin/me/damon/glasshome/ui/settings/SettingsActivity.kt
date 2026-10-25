@@ -21,6 +21,8 @@ import me.damon.glasshome.model.IconStyle
 import me.damon.glasshome.model.LayoutMode
 import me.damon.glasshome.model.PillMaterial
 import me.damon.glasshome.ui.Motion
+import me.damon.glasshome.ui.WallpaperBackdrop
+import me.damon.glasshome.ui.wallpapers.WallpapersActivity
 
 /**
  * Appearance options, chosen with the remote: Up/Down between rows, Left/Right between the choices
@@ -32,6 +34,8 @@ class SettingsActivity : ComponentActivity()
     private val repository
         get() = (application as GlassHomeApplication).container.homeRepository
     private val viewModel: SettingsViewModel by viewModels { SettingsViewModel.factory(repository) }
+    private val wallpapers
+        get() = (application as GlassHomeApplication).container.wallpaperRepository
 
     private val chipRows = mutableListOf<ChipRow>()
     private var firstChip: View? = null
@@ -45,7 +49,22 @@ class SettingsActivity : ComponentActivity()
         addRow(container, R.string.settings_layout, LayoutMode.entries, { it.layout }) { viewModel.setLayout(it) }
         addRow(container, R.string.settings_material, PillMaterial.entries, { it.material }) { viewModel.setMaterial(it) }
         addRow(container, R.string.settings_icons, IconStyle.entries, { it.icons }) { viewModel.setIcons(it) }
-        addSystemRow(container)
+        addActionRow(container, R.string.settings_background, R.string.settings_photos) {
+            startActivity(Intent(this, WallpapersActivity::class.java))
+        }
+        addActionRow(container, R.string.settings_diagnostics, R.string.settings_view) {
+            startActivity(Intent(this, DiagnosticsActivity::class.java))
+        }
+        addActionRow(container, R.string.settings_system, R.string.settings_open) {
+            startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+
+        val backdrop = WallpaperBackdrop(this, findViewById(R.id.settingsWallpaper), restingAlpha = 0.55f)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                wallpapers.state.collect { backdrop.show(it) }
+            }
+        }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -74,7 +93,7 @@ class SettingsActivity : ComponentActivity()
     {
         val block = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(0, 0, 0, dp(577f).toInt() / 25)
+            setPadding(0, 0, 0, dp(ROW_GAP_DP).toInt())
             gravity = Gravity.CENTER_VERTICAL
             clipChildren = false
             clipToPadding = false
@@ -109,13 +128,14 @@ class SettingsActivity : ComponentActivity()
         container.addView(block)
     }
 
-    private fun addSystemRow(container: LinearLayout)
+    /** A row that opens something else, rather than choosing a value in place. */
+    private fun addActionRow(container: LinearLayout, titleRes: Int, chipRes: Int, onClick: () -> Unit)
     {
         val block = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        block.addView(label(getString(R.string.settings_system), 13f, 0.16f, 0x8CFFFFFF.toInt()).also { view ->
+        block.addView(label(getString(titleRes), 13f, 0.16f, 0x8CFFFFFF.toInt()).also { view ->
             view.layoutParams = LinearLayout.LayoutParams(dp(180f).toInt(), LinearLayout.LayoutParams.WRAP_CONTENT)
         })
 
@@ -125,10 +145,8 @@ class SettingsActivity : ComponentActivity()
             clipChildren = false
             clipToPadding = false
         }
-        strip.addView(chip(getString(R.string.settings_open)).also { view ->
-            view.setOnClickListener {
-                startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
+        strip.addView(chip(getString(chipRes)).also { view ->
+            view.setOnClickListener { onClick() }
         })
         block.addView(strip)
         container.addView(block)
@@ -165,6 +183,11 @@ class SettingsActivity : ComponentActivity()
     }
 
     private fun prettify(name: String): String = name.lowercase().replaceFirstChar { it.uppercase() }
+
+    private companion object
+    {
+        private const val ROW_GAP_DP = 13f
+    }
 
     private class ChipRow(
         val current: (Appearance) -> Enum<*>,

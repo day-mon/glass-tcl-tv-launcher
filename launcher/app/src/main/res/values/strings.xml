@@ -25,4 +25,34 @@
     <string name="settings_icons">Icons</string>
     <string name="settings_system">System</string>
     <string name="settings_open">Open Android settings</string>
+    <string name="settings_background">Background</string>
+    <string name="settings_photos">Photos</string>
+    <string name="wallpaper_title">Background</string>
+    <string name="wallpaper_subtitle">Photos on this TV</string>
+    <string name="wallpaper_built_in">Built-in</string>
+    <string name="wallpaper_shuffle_on">Shuffle: on</string>
+    <string name="wallpaper_shuffle_off">Shuffle: off</string>
+    <string name="wallpaper_empty">No photos yet. Run ./gradlew tvWallpapers -Pphotos=&lt;folder&gt; to copy an album to the TV.</string>
+    <string name="wallpaper_hint">OK to choose · Back to return</string>
+    <string name="settings_diagnostics">Diagnostics</string>
+    <string name="settings_view">View</string>
+    <string name="diagnostics">Diagnostics</string>
+    <string name="diagnostics_subtitle">Live · this TV</string>
+    <string name="diagnostics_hint">Back to return · updates every two seconds</string>
+    <string name="diagnostics_storage">Storage</string>
+    <string name="diagnostics_memory">Memory</string>
+    <string name="diagnostics_cpu">CPU</string>
+    <string name="diagnostics_launcher">Launcher</string>
+    <string name="diagnostics_uptime">Uptime</string>
+    <string name="diagnostics_used_of">%1$s used of %2$s</string>
+    <string name="diagnostics_free">%1$s free</string>
+    <string name="diagnostics_percent">%1$d%%</string>
+    <string name="diagnostics_load">load average %1$.2f</string>
+    <string name="diagnostics_load_hidden">this app · system-wide CPU is kept from apps here</string>
+    <string name="diagnostics_cpu_detail">this app · %1$s of one core</string>
+    <string name="diagnostics_launcher_detail">this app, resident memory</string>
+    <string name="diagnostics_uptime_detail">since the TV last woke</string>
+    <string name="diagnostics_days">%1$d d %2$d h</string>
+    <string name="diagnostics_hours">%1$d h %2$d min</string>
+    <string name="diagnostics_minutes">%1$d min</string>
 </resources>

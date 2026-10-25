@@ -13,6 +13,9 @@ val tvIp = (findProperty("tvIp") as String?) ?: "192.168.10.208"
 val tvRouter = (findProperty("tvRouter") as String?) ?: "home-router"
 val tvPort = (findProperty("tvPort") as String?) ?: "5555"
 val tvDevice = "127.0.0.1:$tvPort"
+
+/** Never leave the TV with less than this after a push: it still has to install and cache. */
+val MIN_FREE_BYTES = 500L * 1024 * 1024
 val tvPackage = "me.damon.glasshome"
 
 val adbExecutable: String by lazy {
@@ -190,6 +193,92 @@ tasks.register("tvTest") {
         val failed = summary.contains("FAILURES!!!") || summary.contains("INSTRUMENTATION_FAILED") ||
                 summary.contains("Error:") || !summary.contains("OK (")
         check(!failed) { "instrumented tests failed; see the runner output above" }
+    }
+}
+
+/** The album on the TV: this app's own external folder, which needs no storage permission. */
+val wallpaperDir = "/sdcard/Android/data/$tvPackage/files/wallpapers"
+
+/** Free bytes on the partition holding [path], or -1 when the TV will not say. */
+fun freeBytes(path: String): Long
+{
+    val process = ProcessBuilder(adbExecutable, "-s", tvDevice, "shell", "df", "-k", path)
+        .redirectErrorStream(true).start()
+    val output = process.inputStream.bufferedReader().readText()
+    process.waitFor()
+    val row = output.lines().lastOrNull { it.isNotBlank() } ?: return -1
+    val available = row.trim().split(Regex("\\s+")).getOrNull(3)?.toLongOrNull() ?: return -1
+    return available * 1024
+}
+
+tasks.register("tvWallpapers") {
+    group = "tv"
+    description = "Copy photos to the TV as wallpapers: -Pphotos=<folder>. They stay on the device, never in the repo."
+    dependsOn("tvConnect")
+
+    doLast {
+        val source = (findProperty("photos") as String?) ?: error("pass -Pphotos=<folder>")
+        val folder = file(source)
+        check(folder.isDirectory) { "not a folder: $folder" }
+
+        val magick = listOf("/opt/homebrew/bin/magick", "/usr/local/bin/magick", "/usr/bin/magick")
+            .firstOrNull { File(it).canExecute() }
+            ?: error("ImageMagick (magick) is what resizes the photos")
+
+        val staged = layout.buildDirectory.dir("wallpapers").get().asFile
+        staged.deleteRecursively()
+        staged.mkdirs()
+
+        val photos = folder.listFiles().orEmpty()
+            .filter { it.isFile && it.extension.lowercase() in setOf("jpg", "jpeg", "png", "heic", "webp", "bmp") }
+            .sortedBy { it.name }
+        check(photos.isNotEmpty()) { "no photos in $folder" }
+
+        photos.forEach { photo ->
+            // One photo is on screen at a time, so a 1920x1080 centre crop is all the TV ever needs.
+            // It also keeps the push quick and the slideshow cheap to decode.
+            check(
+                exec(
+                    magick, photo.absolutePath,
+                    "-auto-orient", "-resize", "1920x1080^", "-gravity", "center", "-extent", "1920x1080",
+                    "-strip", "-quality", "82",
+                    File(staged, photo.nameWithoutExtension + ".jpg").absolutePath
+                ) == 0
+            ) { "could not resize $photo" }
+        }
+
+        // Photos share the TV's only partition with everything else, so leave room behind rather
+        // than quietly filling the set.
+        val incoming = staged.listFiles().orEmpty().sumOf { it.length() }
+        val free = freeBytes("/sdcard")
+        if (free > 0)
+        {
+            logger.lifecycle("  album needs ${incoming / 1048576} MB; the TV has ${free / 1073741824} GB free")
+            check(free - incoming > MIN_FREE_BYTES) {
+                "that would leave under ${MIN_FREE_BYTES / 1048576} MB free on the TV; nothing was pushed"
+            }
+        }
+
+        check(adb("shell", "mkdir", "-p", wallpaperDir) == 0) { "could not create $wallpaperDir" }
+        check(adb("push", staged.absolutePath + "/.", wallpaperDir) == 0) { "push failed" }
+        // adb creates these as the shell user, which leaves the folder closed to the app that has to
+        // read and add to it. Only apps can reach this path at all (it is this package's own external
+        // directory), so the owner bits are the only thing that needs widening.
+        check(adb("shell", "chmod", "-R", "a+rwX", wallpaperDir) == 0) { "could not open $wallpaperDir" }
+        logger.lifecycle("  ${photos.size} photos now in $wallpaperDir")
+        val left = freeBytes("/sdcard")
+        if (left > 0) logger.lifecycle("  ${left / 1073741824} GB still free")
+    }
+}
+
+tasks.register("tvWallpapersClear") {
+    group = "tv"
+    description = "Remove every photo from the TV's wallpaper album."
+    dependsOn("tvConnect")
+
+    doLast {
+        adb("shell", "rm", "-rf", wallpaperDir)
+        logger.lifecycle("  cleared $wallpaperDir")
     }
 }
 

@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Trace
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.Gravity
 import android.view.KeyEvent
@@ -38,6 +39,7 @@ import me.damon.glasshome.ui.GlassPillController
 import me.damon.glasshome.ui.InputsMenu
 import me.damon.glasshome.ui.Motion
 import me.damon.glasshome.ui.RemoteLongPress
+import me.damon.glasshome.ui.WallpaperBackdrop
 import me.damon.glasshome.ui.settings.SettingsActivity
 import kotlin.math.max
 import kotlin.math.min
@@ -50,6 +52,8 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
 {
     private val repository
         get() = (application as GlassHomeApplication).container.homeRepository
+    private val wallpapers
+        get() = (application as GlassHomeApplication).container.wallpaperRepository
     private val viewModel: HomeViewModel by viewModels { HomeViewModel.factory(repository) }
 
     private lateinit var adapter: AppListAdapter
@@ -59,11 +63,14 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
     private lateinit var btnWifi: TextView
     private lateinit var sideLinks: View
     private lateinit var listFade: View
+    private lateinit var backdrop: WallpaperBackdrop
 
     private var renderedLayout: LayoutMode? = null
     private var entrancePlayed = false
     private var lastFocusedRow = 0
     private var focusPlaced = false
+    /** When the launcher was last covered up, so a background only changes after a real absence. */
+    private var coveredUpAt = 0L
 
     private val longPress = RemoteLongPress { pickUpFocusedRow() }
 
@@ -96,6 +103,7 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
         list.adapter = adapter
 
         pill = GlassPillController(this, root, findViewById(R.id.glass), list)
+        backdrop = WallpaperBackdrop(this, findViewById(R.id.wallpaper))
 
         findViewById<View>(R.id.btnInputs).setOnClickListener { inputs.show(it) }
         btnWifi.setOnClickListener { open(Intent(Settings.ACTION_WIFI_SETTINGS)) }
@@ -114,6 +122,11 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
                 viewModel.state.collect { render(it) }
             }
         }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                wallpapers.state.collect { backdrop.show(it) }
+            }
+        }
         Trace.endSection()
     }
 
@@ -123,6 +136,12 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
         // Undo the launch feedback in case the app we opened did not cover the screen.
         resetRowTransforms()
         viewModel.reload()
+        wallpapers.refresh()
+        // Only a real absence earns a new photo; stepping into Settings and back does not.
+        if (coveredUpAt != 0L && SystemClock.elapsedRealtime() - coveredUpAt > CHANGED_BACKGROUND_AFTER_MS)
+        {
+            wallpapers.advance()
+        }
         refreshConnectionLabel()
         handler.postDelayed(minuteTick, MINUTE_MS)
     }
@@ -130,6 +149,7 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
     override fun onPause()
     {
         super.onPause()
+        coveredUpAt = SystemClock.elapsedRealtime()
         handler.removeCallbacks(minuteTick)
     }
 
@@ -335,6 +355,9 @@ class MainActivity : ComponentActivity(), AppListAdapter.Listener
     private companion object
     {
         private const val MINUTE_MS = 60_000L
+
+        /** A background changes only after this long away, so Settings and back keeps the photo. */
+        private const val CHANGED_BACKGROUND_AFTER_MS = 20_000L
     }
 
     private fun open(intent: Intent)

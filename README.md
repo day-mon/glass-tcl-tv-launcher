@@ -27,12 +27,14 @@ Node, no wrapper scripts.
 cd launcher
 
 ./gradlew generateGlyphs   # SVGs in glyphs/ -> res/drawable/glyph_*.xml
-./gradlew testDebugUnitTest  # 24 JVM tests (Robolectric), ~11 s, no device
+./gradlew testDebugUnitTest  # 37 JVM tests (Robolectric), ~11 s, no device
 ./gradlew tvInstall        # build + install on the TV
 ./gradlew tvLaunch         # open it
 ./gradlew tvHome           # make it the Home app
 ./gradlew tvTest           # 12 instrumented tests, on the TV
 ./gradlew tvScreenshot     # save the current screen to app/build/screen.png
+./gradlew tvWallpapers -Pphotos=<folder>   # copy a photo album to the TV
+./gradlew tvWallpapersClear                 # empty it again
 ./gradlew tvDebloat        # apply examples/<tv>/debloat.txt
 ./gradlew tvRestore        # undo it
 ```
@@ -50,6 +52,43 @@ Revert Home to a previous launcher at any time:
 ```sh
 adb shell cmd package set-home-activity --user 0 <old.package>
 ```
+
+## Your own photos as the background
+
+The background can be your own photographs. They live **on the TV**, in the launcher's own folder,
+so personal photos never enter this repository:
+
+```sh
+./gradlew tvWallpapers -Pphotos="$HOME/Desktop/trips"
+```
+
+Each photo is resized to 1920x1080, centre cropped, and pushed over the same tunnel the other tasks
+use. On the TV, open **Settings -> Background -> Photos** to pick one, or turn on **Shuffle** to get
+a new photo each time you come back to the home screen. **Built-in** is always offered first, so the
+album can be switched off again.
+
+Sizes, measured on this set: a photo costs about **240 KB**, because the launcher renders at 1920x1080
+(the UI is composed at 1080p and scaled to the panel). A trip's worth of 500 photos is roughly
+120 MB; the million-photo case is not a worry, but `tvWallpapers` still refuses to run if it would
+leave less than 500 MB free on the TV.
+
+Android TV ships no document picker (this set has only a stub for `OPEN_DOCUMENT_TREE`), so there is
+no folder browser to hand the choice to the system. The album folder is the contract instead:
+anything else that can write files to the TV can fill it.
+
+## Diagnostics
+
+**Settings -> Diagnostics** shows storage, memory, this app's CPU share and uptime, refreshed every
+two seconds while the screen is open (the polling stops when it is not).
+
+A reading costs about **2 ms**, and a test fails the build if it ever exceeds 8 ms. That is not
+fussiness: the obvious Android APIs for these facts (`ActivityManager.getMemoryInfo`,
+`Debug.getMemoryInfo`) are binder round trips that cost **90 ms** per reading on this TV, so the
+reader uses `/proc/meminfo`, `/proc/self/statm` and `Process.getElapsedCpuTime` instead.
+
+One honest limitation: Android 12 on this set denies apps `/proc/stat` and `/proc/loadavg` (a shell
+can read them, an app cannot), so there is no system-wide CPU percentage to show. The screen reports
+this app's own share and says so, rather than printing a confident 0%.
 
 ## Configure it
 

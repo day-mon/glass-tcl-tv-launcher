@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rounded holder for a photo; clipToOutline uses this outline so the image cannot square off
+     the corners of the tile it sits in. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <corners android:radius="10dp" />
+    <solid android:color="#FF1C1C1E" />
+</shape>
