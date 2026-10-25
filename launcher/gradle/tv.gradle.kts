@@ -4,13 +4,30 @@
 // set through a host that can reach it, then points adb at that local port. Every other task
 // depends on it. No wrapper scripts, no Python: adb and ssh do the work.
 //
-// Overrides (gradle.properties, local.properties, or -P):
-//   tvIp      the television's address on its own network   (default 192.168.10.208)
-//   tvRouter  an ~/.ssh/config host that can reach the TV   (default home-router)
-//   tvPort    adb port on the TV                            (default 5555)
+// Set these for your own television. They are deliberately not baked into this file: pass them with
+// -P, or put them in launcher/local.properties, which is ignored by git.
+//
+//   tvIp      the television's address on its own network
+//   tvRouter  an ~/.ssh/config host that can reach the TV, used only when it is on another network
+//   tvPort    adb port on the TV (default 5555)
+//
+//   ./gradlew tvInstall -PtvIp=192.168.1.50 -PtvRouter=my-router
+//
+// or, in launcher/local.properties:
+//
+//   tvIp=192.168.1.50
+//   tvRouter=my-router
 
-val tvIp = (findProperty("tvIp") as String?) ?: "192.168.10.208"
-val tvRouter = (findProperty("tvRouter") as String?) ?: "home-router"
+/** A value from launcher/local.properties, which is never committed. */
+fun localSetting(key: String): String? =
+    rootProject.file("local.properties")
+        .takeIf { it.exists() }
+        ?.let { file -> Regex("^${Regex.escape(key)}=(.*)$", RegexOption.MULTILINE).find(file.readText()) }
+        ?.groupValues?.get(1)?.trim()
+        ?.takeIf { it.isNotEmpty() }
+
+val tvIp = (findProperty("tvIp") as String?) ?: localSetting("tvIp") ?: "192.168.1.50"
+val tvRouter = (findProperty("tvRouter") as String?) ?: localSetting("tvRouter") ?: "my-router"
 val tvPort = (findProperty("tvPort") as String?) ?: "5555"
 val tvDevice = "127.0.0.1:$tvPort"
 

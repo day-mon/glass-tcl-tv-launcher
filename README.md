@@ -87,7 +87,7 @@ adb uninstall me.damon.glasshome
 `tv*` Gradle tasks forward a port through an SSH host that can reach it and point `adb` at that port:
 
 ```sh
-./gradlew tvInstall -PtvIp=192.168.10.208 -PtvRouter=my-router
+./gradlew tvInstall -PtvIp=192.168.1.50 -PtvRouter=my-router
 ```
 
 ## Using it
