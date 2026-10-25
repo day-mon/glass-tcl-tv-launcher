@@ -28,6 +28,18 @@
             android:contentDescription="@null" />
 
         <TextView
+            android:id="@+id/monogram"
+            android:layout_width="@dimen/icon_size"
+            android:layout_height="@dimen/icon_size"
+            android:gravity="center"
+            android:visibility="gone"
+            android:includeFontPadding="false"
+            android:textColor="#E6FFFFFF"
+            android:textSize="26sp"
+            android:fontFamily="@font/outfit"
+            android:fontVariationSettings="'wght' 400" />
+
+        <TextView
             android:id="@+id/label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

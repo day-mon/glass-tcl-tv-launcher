@@ -24,7 +24,8 @@ object GlyphIcons
     /** Above this share of light pixels the icon is treated as a coloured logo on a white tile. */
     private const val INVERT_ABOVE = 0.45f
 
-    fun of(icon: Drawable, size: Int): Drawable
+    /** Returns null when the icon has no usable glyph: blank, or a solid block of colour. */
+    fun of(icon: Drawable, size: Int): Drawable?
     {
         Trace.beginSection("glasshome:glyph")
         try
@@ -37,17 +38,17 @@ object GlyphIcons
         }
     }
 
-    private fun bitmapOf(icon: Drawable, size: Int): Drawable
+    private fun bitmapOf(icon: Drawable, size: Int): Drawable?
     {
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val copy = icon.constantState?.newDrawable()?.mutate() ?: icon
         copy.setBounds(0, 0, size, size)
         copy.draw(Canvas(bitmap))
-        mask(bitmap)
+        if (!mask(bitmap)) return null
         return BitmapDrawable(null, bitmap)
     }
 
-    private fun mask(bitmap: Bitmap)
+    private fun mask(bitmap: Bitmap): Boolean
     {
         val width = bitmap.width
         val height = bitmap.height
@@ -92,6 +93,15 @@ object GlyphIcons
         }
 
         bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+
+        // A logo covers part of the icon; a photograph or a flat tile covers all of it. Sampling the
+        // corners catches the latter cheaply, and the inked fraction catches the former.
+        val corner = { x: Int, y: Int -> ((pixels[y * width + x] ushr 24) and 0xFF) > 40 }
+        val cornersInked = listOf(
+            corner(1, 1), corner(width - 2, 1), corner(1, height - 2), corner(width - 2, height - 2)
+        ).count { it }
+        val inked = pixels.count { ((it ushr 24) and 0xFF) > 40 }.toFloat() / pixels.size
+        return cornersInked < 4 && inked in 0.02f..0.75f
     }
 
     private fun normalise(value: Float, floor: Float, range: Float): Float =

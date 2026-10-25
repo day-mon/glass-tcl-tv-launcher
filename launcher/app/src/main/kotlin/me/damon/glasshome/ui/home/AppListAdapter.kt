@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.Trace
+import android.util.Log
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
@@ -23,8 +24,11 @@ import me.damon.glasshome.ui.GlyphIcons
 import me.damon.glasshome.ui.IconLibrary
 
 /** Rows without focus sit back so the focused one reads instantly from across the room. */
+private const val TAG = "GlassHome"
+
 private const val ALPHA_LABEL_IDLE = 0.44f
 private const val ALPHA_ICON_IDLE = 0.50f
+private const val ALPHA_MONOGRAM_IDLE = 0.38f
 
 /**
  * Renders the entries the repository hands over. It never reads storage itself: appearance and the
@@ -54,7 +58,10 @@ class AppListAdapter(
     private var entries: List<AppEntry> = emptyList()
     private var appearance = Appearance()
     /** Filled on a background thread by [warm], read on the main thread while binding. */
-    private val iconCache = ConcurrentHashMap<String, Drawable?>()
+    private val iconCache = ConcurrentHashMap<String, Drawable>()
+
+    /** Apps with nothing worth drawing: no glyph, no usable mask, so they get a monogram. */
+    private val missingIcons: MutableSet<String> = java.util.Collections.newSetFromMap(ConcurrentHashMap())
     private val iconSize: Int = context.resources.getDimensionPixelSize(R.dimen.icon_size)
 
     var moving: Boolean = false
@@ -90,9 +97,16 @@ class AppListAdapter(
         Trace.beginSection("glasshome:bind")
         val entry = entries[position]
         holder.label.text = entry.label
-        val showIcon = appearance.icons == IconStyle.GLYPHS
-        holder.icon.visibility = if (showIcon) View.VISIBLE else View.GONE
-        holder.icon.setImageDrawable(if (showIcon) iconOf(entry) else null)
+
+        val showIcons = appearance.icons == IconStyle.GLYPHS
+        val drawable = if (showIcons) iconOf(entry) else null
+        holder.icon.visibility = if (drawable != null) View.VISIBLE else View.GONE
+        holder.icon.setImageDrawable(drawable)
+        holder.sizedIcon(IconLibrary.isWordmark(entry.packageName))
+
+        holder.monogram.visibility = if (showIcons && drawable == null) View.VISIBLE else View.GONE
+        holder.monogram.text = entry.label.take(1).uppercase()
+
         holder.setFocused(holder.content.hasFocus())
 
         holder.content.setOnClickListener { view ->
@@ -140,13 +154,12 @@ class AppListAdapter(
     private fun iconOf(entry: AppEntry): Drawable?
     {
         iconCache[entry.packageName]?.let { return it }
-        IconLibrary.forPackage(entry.packageName)?.let {
-            val drawable = context.getDrawable(it)
-            iconCache[entry.packageName] = drawable
-            return drawable
-        }
-        val icon = entry.icon ?: return null
-        return GlyphIcons.of(icon, iconSize).also { iconCache[entry.packageName] = it }
+        if (entry.packageName in missingIcons) return null
+
+        val resolved = loadIcon(entry)
+        if (resolved == null) missingIcons += entry.packageName
+        else iconCache[entry.packageName] = resolved
+        return resolved
     }
 
     /**
@@ -157,7 +170,10 @@ class AppListAdapter(
     {
         if (appearance.icons != IconStyle.GLYPHS) return
         entries.forEach { entry ->
-            if (!iconCache.containsKey(entry.packageName)) iconCache[entry.packageName] = loadIcon(entry)
+            if (iconCache.containsKey(entry.packageName) || entry.packageName in missingIcons) return@forEach
+            val resolved = loadIcon(entry)
+            if (resolved == null) missingIcons += entry.packageName
+            else iconCache[entry.packageName] = resolved
         }
     }
 
@@ -167,11 +183,17 @@ class AppListAdapter(
         if (itemCount > 0) notifyItemRangeChanged(0, itemCount)
     }
 
-    private fun loadIcon(entry: AppEntry): Drawable?
+    private fun loadIcon(entry: AppEntry): Drawable? = try
     {
         IconLibrary.forPackage(entry.packageName)?.let { return context.getDrawable(it) }
         val icon = entry.icon ?: return null
-        return GlyphIcons.of(icon, iconSize)
+        GlyphIcons.of(icon, iconSize)
+    }
+    catch (error: Exception)
+    {
+        // A malformed glyph or a broken app icon must cost that one row, never the launcher.
+        Log.w(TAG, "no icon for ${entry.packageName}: ${error.message}")
+        null
     }
 
     fun launch(entry: AppEntry)
@@ -197,7 +219,22 @@ class AppListAdapter(
     {
         val content: View = view.findViewById(R.id.content)
         val icon: ImageView = view.findViewById(R.id.icon)
+        val monogram: TextView = view.findViewById(R.id.monogram)
         val label: TextView = view.findViewById(R.id.label)
+
+        private val square: Int = view.resources.getDimensionPixelSize(R.dimen.icon_size)
+
+        /** Wordmarks are wide and short, so they get a wider box than the square marks. */
+        fun sizedIcon(wordmark: Boolean)
+        {
+            val width = if (wordmark) (square * 1.7f).toInt() else square
+            val params = icon.layoutParams
+            if (params.width != width)
+            {
+                params.width = width
+                icon.layoutParams = params
+            }
+        }
 
         init
         {
@@ -218,6 +255,7 @@ class AppListAdapter(
         {
             label.animate().alpha(if (focused) 1f else ALPHA_LABEL_IDLE).setDuration(160).start()
             icon.animate().alpha(if (focused) 1f else ALPHA_ICON_IDLE).setDuration(160).start()
+            monogram.animate().alpha(if (focused) 1f else ALPHA_MONOGRAM_IDLE).setDuration(160).start()
         }
 
         private fun handleKey(keyCode: Int, event: KeyEvent): Boolean
