@@ -60,7 +60,6 @@ fun openTunnel()
         "-L", "127.0.0.1:$tvPort:$tvIp:$tvPort",
         "-o", "BatchMode=yes",
         "-o", "ExitOnForwardFailure=yes",
-        // Without these a dead link keeps the local port open and every adb call fails as "closed".
         "-o", "ServerAliveInterval=15",
         "-o", "ServerAliveCountMax=3",
         tvRouter
