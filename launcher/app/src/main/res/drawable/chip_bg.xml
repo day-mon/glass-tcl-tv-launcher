@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Selected reads as a solid white pill; focus adds a rim on top of it. -->
+<!-- Clear tint: the photograph reads through the chosen chip. Focus adds a rim and a little more light. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true">
         <shape android:shape="rectangle">
             <corners android:radius="12dp" />
-            <solid android:color="#F2FFFFFF" />
-            <stroke android:width="2dp" android:color="#FFFFFFFF" />
+            <solid android:color="#59FFFFFF" />
+            <stroke android:width="1dp" android:color="#99FFFFFF" />
         </shape>
     </item>
     <item android:state_selected="true">
         <shape android:shape="rectangle">
             <corners android:radius="12dp" />
-            <solid android:color="#D9FFFFFF" />
+            <solid android:color="#33FFFFFF" />
         </shape>
     </item>
     <item>
