@@ -27,11 +27,11 @@ Node, no wrapper scripts.
 cd launcher
 
 ./gradlew generateGlyphs   # SVGs in glyphs/ -> res/drawable/glyph_*.xml
-./gradlew testDebugUnitTest  # 17 JVM tests (Robolectric), ~11 s, no device
+./gradlew testDebugUnitTest  # 24 JVM tests (Robolectric), ~11 s, no device
 ./gradlew tvInstall        # build + install on the TV
 ./gradlew tvLaunch         # open it
 ./gradlew tvHome           # make it the Home app
-./gradlew tvTest           # 7 instrumented tests, on the TV
+./gradlew tvTest           # 12 instrumented tests, on the TV
 ./gradlew tvScreenshot     # save the current screen to app/build/screen.png
 ./gradlew tvDebloat        # apply examples/<tv>/debloat.txt
 ./gradlew tvRestore        # undo it

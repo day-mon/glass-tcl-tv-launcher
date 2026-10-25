@@ -113,20 +113,33 @@ tasks.register("tvInstall") {
         check(adb("install", "-r", apk.absolutePath) == 0) { "install failed" }
         adb("shell", "pm", "grant", tvPackage, "android.permission.ACCESS_FINE_LOCATION")
         // A reinstalled app loses its ahead-of-time output; the home screen is opened constantly.
-        adb("shell", "cmd", "package", "compile", "-m", "speed", "-f", tvPackage)
+        compileAheadOfTime()
     }
+}
+
+/**
+ * Asks ART to compile the installed package ahead of time. A debug APK is debuggable, and ART
+ * silently downgrades those to `verify` whatever filter is requested, so report which one it
+ * actually used instead of implying `speed` worked.
+ */
+fun compileAheadOfTime()
+{
+    check(adb("shell", "cmd", "package", "compile", "-m", "speed", "-f", tvPackage) == 0) {
+        "dex2oat compile failed"
+    }
+    val state = ProcessBuilder(adbExecutable, "-s", tvDevice, "shell", "dumpsys", "package", tvPackage)
+        .redirectErrorStream(true).start().inputStream.bufferedReader().readText()
+    val filter = Regex("status=(\\w+)").find(state)?.groupValues?.get(1) ?: "unknown"
+    if (filter == "speed") logger.lifecycle("dex2oat: compiled for speed")
+    else logger.warn("dex2oat: ART kept \"$filter\" (debuggable APK); a release build would compile for speed")
 }
 
 tasks.register("tvCompile") {
     group = "tv"
-    description = "Compile the installed app ahead of time (dex2oat speed). Cuts cold start roughly in half on this TV."
+    description = "Compile the installed app ahead of time (dex2oat). Falls back to verify for debug APKs."
     dependsOn("tvConnect")
 
-    doLast {
-        check(adb("shell", "cmd", "package", "compile", "-m", "speed", "-f", tvPackage) == 0) {
-            "dex2oat compile failed"
-        }
-    }
+    doLast { compileAheadOfTime() }
 }
 
 tasks.register("tvLaunch") {
