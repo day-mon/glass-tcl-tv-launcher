@@ -97,6 +97,21 @@ class WallpaperStoreTest
     }
 
     @Test
+    fun `the bundled photograph can be chosen while the album has photos`()
+    {
+        photo("a.jpg")
+        photo("b.jpg")
+        val photos = store.photos()
+
+        store.choose(null)
+        assertNull(store.chosen(photos))
+
+        // ...and choosing a photo afterwards still works.
+        store.choose(photos[1])
+        assertEquals("b.jpg", store.chosen(photos)?.file?.name)
+    }
+
+    @Test
     fun `shuffle is off until it is asked for, and is remembered`()
     {
         assertFalse(store.shuffle())

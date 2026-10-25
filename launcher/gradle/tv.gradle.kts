@@ -261,10 +261,10 @@ tasks.register("tvWallpapers") {
 
         check(adb("shell", "mkdir", "-p", wallpaperDir) == 0) { "could not create $wallpaperDir" }
         check(adb("push", staged.absolutePath + "/.", wallpaperDir) == 0) { "push failed" }
-        // adb creates these as the shell user, which leaves the folder closed to the app that has to
-        // read and add to it. Only apps can reach this path at all (it is this package's own external
-        // directory), so the owner bits are the only thing that needs widening.
-        check(adb("shell", "chmod", "-R", "a+rwX", wallpaperDir) == 0) { "could not open $wallpaperDir" }
+        // adb writes these as the shell user, so the app that has to read them is "other". Widen the
+        // files it just pushed. The directory is left alone: once the app has created it, it belongs
+        // to the app, and only apps can reach this path at all (it is this package's own directory).
+        adb("shell", "chmod", "a+rwX", "$wallpaperDir/*")
         logger.lifecycle("  ${photos.size} photos now in $wallpaperDir")
         val left = freeBytes("/sdcard")
         if (left > 0) logger.lifecycle("  ${left / 1073741824} GB still free")

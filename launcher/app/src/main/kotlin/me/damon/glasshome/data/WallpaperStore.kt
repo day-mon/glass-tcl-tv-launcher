@@ -29,10 +29,14 @@ class WallpaperStore(
         ?.toList()
         ?: emptyList()
 
-    /** The chosen photo, or the first one, so an album that has never been touched still shows. */
+    /**
+     * The chosen photo. Nothing stored means an album that has never been touched, so the first
+     * photo shows. [BUILT_IN] is an answer in itself: the owner asked for the bundled photograph.
+     */
     fun chosen(photos: List<WallpaperPhoto>): WallpaperPhoto?
     {
-        val name = prefs.getString(KEY_CURRENT, null)
+        val name = prefs.getString(KEY_CURRENT, null) ?: return photos.firstOrNull()
+        if (name == BUILT_IN) return null
         return photos.firstOrNull { it.file.name == name } ?: photos.firstOrNull()
     }
 
@@ -46,7 +50,9 @@ class WallpaperStore(
 
     fun choose(photo: WallpaperPhoto?)
     {
-        prefs.edit().putString(KEY_CURRENT, photo?.file?.name).apply()
+        // Stored as a value rather than removed: choosing the bundled photograph has to survive an
+        // album that is not empty, or the choice reads as "never chosen" and the first photo wins.
+        prefs.edit().putString(KEY_CURRENT, photo?.file?.name ?: BUILT_IN).apply()
     }
 
     fun shuffle(): Boolean = prefs.getBoolean(KEY_SHUFFLE, false)
@@ -60,6 +66,9 @@ class WallpaperStore(
     {
         private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp", "bmp")
         private const val KEY_CURRENT = "wallpaper_current"
+
+        /** Marks "the bundled photograph" as a choice, distinct from "nothing chosen yet". */
+        const val BUILT_IN = "built-in"
         private const val KEY_SHUFFLE = "wallpaper_shuffle"
 
         fun folderFor(context: Context): File =
